@@ -1,0 +1,125 @@
+{
+  "name": "one_batch_test",
+  "n_gpu": 1,
+  "preprocessing": {
+    "sr": 16000,
+    "spectrogram": {
+      "type": "MelSpectrogram",
+      "args": {
+      }
+    },
+    "log_spec": true
+  },
+  "augmentations": {
+    "wave": [
+    ],
+    "spectrogram": [
+    ]
+  },
+  "arch": {
+    "type": "SpEx",
+    "args": {
+    }
+  },
+  "data": {
+    "train": {
+      "batch_size": 3,
+      "num_workers": 0,
+      "datasets": [
+        {
+          "type": "LibrispeechTripletDataset",
+          "args": {
+            "mixer_config": {
+              "nfiles": 10000,
+              "test": false,
+              "path": "/kaggle/input/ss-dataset-no-wad",
+              "snr_levels": [-5, 5],
+              "num_workers": 2,
+              "trim_db": 20,
+              "vad_db": 20,
+              "audio_len": 3
+            },
+            "part": "train-clean-100",
+            "data_dir": "/kaggle/input/librispeech/train-clean-100/LibriSpeech"
+          }
+        }
+      ]
+    },
+    "val": {
+      "batch_size": 1,
+      "num_workers": 0,
+      "datasets": [
+        {
+          "type": "LibrispeechTripletDataset",
+          "args": {
+            "mixer_config": {
+              "nfiles": 10000,
+              "test": true,
+              "path": "/kaggle/input/ss-dataset-no-wad",
+              "snr_levels": [0, 0],
+              "num_workers": 2,
+              "vad_db": 20,
+              "audio_len": 3
+            },
+            "part": "dev-clean",
+            "data_dir": "/kaggle/input/librispeech/test-clean/LibriSpeech"
+          }
+        }
+      ]
+    }
+  },
+  "optimizer": {
+    "type": "AdamW",
+    "args": {
+      "lr": 2.5e-4,
+      "weight_decay": 1e-5
+    }
+  },
+  "loss": {
+    "type": "SISDRLoss",
+    "args": {
+    }
+  },
+  "metrics": [
+    {
+      "type": "SISDRMetric",
+      "args": {
+        "name": "SI-SDR"
+      }
+    },
+    {
+      "type": "AccuracyMetric",
+      "args": {
+        "name": "ACCURACY"
+      }
+    },
+    {
+      "type": "PESQMetric",
+      "args": {
+        "name": "PESQ"
+      }
+    }
+  ],
+  "lr_scheduler": {
+    "type": "ReduceLROnPlateau",
+    "args": {
+      "mode": "min",
+      "factor": 0.5,
+      "patience": 2,
+      "min_lr": 0.0,
+      "verbose": true
+    }
+  },
+  "trainer": {
+    "epochs": 50,
+    "save_dir": "saved/",
+    "save_period": 5,
+    "verbosity": 2,
+    "monitor": "min val_loss",
+    "early_stop": 100,
+    "visualize": "wandb",
+    "wandb_project": "ss_project",
+    "len_epoch": 1500,
+    "grad_norm_clip": 100
+  }
+}

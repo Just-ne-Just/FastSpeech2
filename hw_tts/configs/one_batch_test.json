@@ -1,0 +1,135 @@
+{
+  "name": "one_batch_test",
+  "n_gpu": 1,
+  "preprocessing": {
+    "sr": 16000,
+    "spectrogram": {
+      "type": "MelSpectrogram",
+      "args": {
+      }
+    },
+    "log_spec": true
+  },
+  "augmentations": {
+    "wave": [
+    ],
+    "spectrogram": [
+    ]
+  },
+  "arch": {
+    "type": "SpEx",
+    "args": {
+      "short_length": 20, 
+      "middle_length": 80,
+      "long_length": 160,
+      "in_channels": 32,
+      "stack_size": 8,
+      "num_stacks": 4,
+      "kernel_size": 3,
+      "proj_channels": 32,
+      "out_channels": 64, 
+      "speaker_dim": 32
+    }
+  },
+  "data": {
+    "train": {
+      "batch_size": 4,
+      "num_workers": 0,
+      "datasets": [
+        {
+          "type": "LibrispeechTripletDataset",
+          "args": {
+            "mixer_config": {
+              "nfiles": 10000,
+              "test": false,
+              "path": "D:\\asr_project_template\\data\\datasets\\librispeech\\mixer",
+              "snr_levels": [-5, 5],
+              "num_workers": 2,
+              "trim_db": 20,
+              "vad_db": 20,
+              "audio_len": 3
+            },
+            "part": "dev-clean",
+            "limit": 4
+          }
+        }
+      ]
+    },
+    "val": {
+      "batch_size": 4,
+      "num_workers": 0,
+      "datasets": [
+        {
+          "type": "LibrispeechTripletDataset",
+          "args": {
+            "mixer_config": {
+              "nfiles": 10000,
+              "test": true,
+              "path": "D:\\asr_project_template\\data\\datasets\\librispeech\\mixer",
+              "snr_levels": [-5, 5],
+              "num_workers": 2,
+              "vad_db": 20,
+              "audio_len": 3
+            },
+            "part": "dev-clean",
+            "limit": 4
+          }
+        }
+      ]
+    }
+  },
+  "optimizer": {
+    "type": "AdamW",
+    "args": {
+      "lr": 1e-3,
+      "weight_decay": 1e-5
+    }
+  },
+  "loss": {
+    "type": "SISDRLoss",
+    "args": {
+    }
+  },
+  "metrics": [
+    {
+      "type": "SISDRMetric",
+      "args": {
+        "name": "SI-SDR"
+      }
+    },
+    {
+      "type": "AccuracyMetric",
+      "args": {
+        "name": "ACCURACY"
+      }
+    },
+    {
+      "type": "PESQMetric",
+      "args": {
+        "name": "PESQ"
+      }
+    }
+  ],
+  "lr_scheduler": {
+    "type": "ReduceLROnPlateau",
+    "args": {
+      "mode": "min",
+      "factor": 0.5,
+      "patience": 1,
+      "min_lr": 0.0,
+      "verbose": true
+    }
+  },
+  "trainer": {
+    "epochs": 50,
+    "save_dir": "saved/",
+    "save_period": 5,
+    "verbosity": 2,
+    "monitor": "min val_loss",
+    "early_stop": 100,
+    "visualize": "wandb",
+    "wandb_project": "ss_project",
+    "len_epoch": 100,
+    "grad_norm_clip": 10
+  }
+}

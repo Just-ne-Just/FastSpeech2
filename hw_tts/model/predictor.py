@@ -14,13 +14,13 @@ class Transpose(nn.Module):
 class Predictor(nn.Module):
     """ Predictor """
 
-    def __init__(self, encoder_dim, duration_predictor_filter_size, duration_predictor_kernel_size, dropout):
+    def __init__(self, encoder_dim, predictor_filter_size, predictor_kernel_size, dropout):
         super(Predictor, self).__init__()
 
         self.input_size = encoder_dim
-        self.filter_size = duration_predictor_filter_size
-        self.kernel =duration_predictor_kernel_size
-        self.conv_output_size = duration_predictor_filter_size
+        self.filter_size = predictor_filter_size
+        self.kernel = predictor_kernel_size
+        self.conv_output_size = predictor_filter_size
         self.dropout = dropout
 
         self.conv_net = nn.Sequential(

@@ -1,7 +1,5 @@
-from hw_asr.loss.CTCLossWrapper import CTCLossWrapper as CTCLoss
-from hw_asr.loss.SISDRLoss import SISDRLoss
+from hw_tts.loss.TTSLoss import TTSLoss
 
 __all__ = [
-    "CTCLoss",
-    "SISDRLoss",
+    "TTSLoss",
 ]

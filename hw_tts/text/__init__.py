@@ -1,7 +1,7 @@
 """ from https://github.com/keithito/tacotron """
 import re
-from text import cleaners
-from text.symbols import symbols
+from hw_tts.text import cleaners
+from hw_tts.text.symbols import symbols
 
 
 # Mappings from symbol to numeric ID and vice versa:
@@ -72,4 +72,4 @@ def _arpabet_to_sequence(text):
 
 
 def _should_keep_symbol(s):
-    return s in _symbol_to_id and s is not '_' and s is not '~'
+    return s in _symbol_to_id and s != '_' and s != '~'

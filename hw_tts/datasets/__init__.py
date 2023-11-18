@@ -1,7 +1,5 @@
-from hw_asr.datasets.librispeech_triplet_dataset import LibrispeechTripletDataset
-from hw_asr.datasets.custom_dir_triplet_dataset import CustomDirTripletDataset
+from hw_tts.datasets.ljspeech_dataset import LJspeechDataset
 
 __all__ = [
-    "LibrispeechTripletDataset",
-    "CustomDirTripletDataset"
+    "LJspeechDataset",
 ]

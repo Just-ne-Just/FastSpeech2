@@ -13,5 +13,6 @@ __all__ = [
     "get_attn_key_pad_mask",
     "get_mask_from_lengths",
     "EnergyPredictor",
-    "PitchPredictor"
+    "PitchPredictor",
+    "FastSpeech2"
 ]

@@ -5,13 +5,12 @@ import warnings
 import numpy as np
 import torch
 
-import hw_asr.loss as module_loss
-import hw_asr.metric as module_metric
-import hw_asr.model as module_arch
-from hw_asr.trainer import Trainer
-from hw_asr.utils import prepare_device
-from hw_asr.utils.object_loading import get_dataloaders
-from hw_asr.utils.parse_config import ConfigParser
+import hw_tts.loss as module_loss
+import hw_tts.model as module_arch
+from hw_tts.trainer import Trainer
+from hw_tts.utils import prepare_device
+from hw_tts.utils.object_loading import get_dataloaders
+from hw_tts.utils.parse_config import ConfigParser
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -30,7 +29,11 @@ def main(config):
     dataloaders = get_dataloaders(config)
 
     # build model architecture, then print to console
-    model = config.init_obj(config["arch"], module_arch, n_speakers=dataloaders["train"].dataset._count_speakers())
+    model = config.init_obj(config["arch"], module_arch, 
+                            min_pitch=dataloaders["train"].dataset.min_pitch,
+                            max_pitch=dataloaders["train"].dataset.max_pitch,
+                            min_energy=dataloaders["train"].dataset.min_energy,
+                            max_energy=dataloaders["train"].dataset.max_energy)
     logger.info(model)
 
     # prepare for (multi-device) GPU training
@@ -42,8 +45,6 @@ def main(config):
     # get function handles of loss and metrics
     loss_module = config.init_obj(config["loss"], module_loss).to(device)
     metrics = [
-        config.init_obj(metric_dict, module_metric)
-        for metric_dict in config["metrics"]
     ]
 
     # build optimizer, learning rate scheduler. delete every line containing lr_scheduler for

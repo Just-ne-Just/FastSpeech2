@@ -11,6 +11,12 @@ import time
 from tqdm import tqdm
 import os
 from hw_tts.text import text_to_sequence
+import gdown
+import shutil
+from speechbrain.utils.data_utils import download_file
+# import hw_tts.waveglow.glow as glow
+
+
 # from text import text_to_sequence
 
 
@@ -184,7 +190,7 @@ def get_data_to_buffer(data_path,
         mel_gt_target = np.load(mel_gt_name)
         
         dur_gt_name = os.path.join(
-            alignment_path, "ljspeech-dur-%05d.npy" % (i+1))
+            alignment_path, f"{i}.npy")
         dur_gt_target = np.load(dur_gt_name)
 
         character = text[i][0:len(text[i])-1]
@@ -229,6 +235,7 @@ def reprocess_tensor(batch, cut_list):
     pitches = [batch[ind]["pitch"] for ind in cut_list]
 
     length_text = np.array([])
+
     for text in texts:
         length_text = np.append(length_text, text.size(0))
 
@@ -266,3 +273,19 @@ def reprocess_tensor(batch, cut_list):
            "mel_max_len": max_mel_len}
 
     return out
+
+
+def get_WaveGlow():
+    waveglow_path = os.path.join("hw_tts/waveglow", "pretrained_model")
+    if not Path(waveglow_path).exists():
+        Path(waveglow_path).mkdir(exist_ok=True, parents=True)
+        download_file("https://drive.google.com/u/0/uc?id=1WsibBTsuRg_SF2Z6L6NFRTT-NjEy1oTx", os.path.join(waveglow_path, "waveglow_256channels.pt"))
+    waveglow_path = os.path.join(waveglow_path, "waveglow_256channels.pt")
+    wave_glow = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_waveglow', model_math='fp32')
+    wave_glow = wave_glow.remove_weightnorm(wave_glow)
+    wave_glow.cuda().eval()
+    for m in wave_glow.modules():
+        if 'Conv' in str(type(m)):
+            setattr(m, 'padding_mode', 'zeros')
+
+    return wave_glow

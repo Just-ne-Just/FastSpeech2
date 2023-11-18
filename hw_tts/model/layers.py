@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from hw_tts.model.utils import get_non_pad_mask, get_attn_key_pad_mask, get_mask_from_lengths
 from hw_tts.model.length_regulator import LengthRegulator
+import numpy as np
 
 
 class ScaledDotProductAttention(nn.Module):
@@ -48,7 +49,7 @@ class MultiHeadAttention(nn.Module):
         self.w_vs = nn.Linear(d_model, n_head * d_v)
 
         self.attention = ScaledDotProductAttention(
-            temperature=d_k**0.5) 
+            scale=d_k**0.5) 
         self.layer_norm = nn.LayerNorm(d_model)
 
         self.fc = nn.Linear(n_head * d_v, d_model)
@@ -61,11 +62,11 @@ class MultiHeadAttention(nn.Module):
     def reset_parameters(self):
          # normal distribution initialization better than kaiming(default in pytorch)
         nn.init.normal_(self.w_qs.weight, mean=0,
-                        std=torch.sqrt(2.0 / (self.d_model + self.d_k)))
+                        std=np.sqrt(2.0 / (self.d_model + self.d_k)))
         nn.init.normal_(self.w_ks.weight, mean=0,
-                        std=torch.sqrt(2.0 / (self.d_model + self.d_k)))
+                        std=np.sqrt(2.0 / (self.d_model + self.d_k)))
         nn.init.normal_(self.w_vs.weight, mean=0,
-                        std=torch.sqrt(2.0 / (self.d_model + self.d_v))) 
+                        std=np.sqrt(2.0 / (self.d_model + self.d_v))) 
         
     def forward(self, q, k, v, mask=None):
         d_k, d_v, n_head = self.d_k, self.d_v, self.n_head
@@ -76,9 +77,9 @@ class MultiHeadAttention(nn.Module):
 
         residual = q
 
-        q = self.w_qs(q).view(sz_b, len_q, n_head, d_k)
-        k = self.w_ks(k).view(sz_b, len_k, n_head, d_k)
-        v = self.w_vs(v).view(sz_b, len_v, n_head, d_v)
+        q = self.w_qs(self.layer_norm(q)).view(sz_b, len_q, n_head, d_k)
+        k = self.w_ks(self.layer_norm(k)).view(sz_b, len_k, n_head, d_k)
+        v = self.w_vs(self.layer_norm(v)).view(sz_b, len_v, n_head, d_v)
 
         q = q.permute(2, 0, 1, 3).contiguous().view(-1, len_q, d_k)  # (n*b) x lq x dk
         k = k.permute(2, 0, 1, 3).contiguous().view(-1, len_k, d_k)  # (n*b) x lk x dk
@@ -92,9 +93,8 @@ class MultiHeadAttention(nn.Module):
         output = output.permute(1, 2, 0, 3).contiguous().view(sz_b, len_q, -1)  # b x lq x (n*dv)
 
         output = self.dropout(self.fc(output))
-        output = self.layer_norm(output + residual)
 
-        return output, attn
+        return output + residual, attn
 
 
 class PositionwiseFeedForward(nn.Module):
@@ -199,13 +199,15 @@ class Encoder(nn.Module):
             dropout=dropout
         ) for _ in range(n_layers)])
 
+        self.pad = pad
+
     def forward(self, src_seq, src_pos, return_attns=False):
 
         enc_slf_attn_list = []
 
         # -- Prepare masks
-        slf_attn_mask = get_attn_key_pad_mask(seq_k=src_seq, seq_q=src_seq)
-        non_pad_mask = get_non_pad_mask(src_seq)
+        slf_attn_mask = get_attn_key_pad_mask(seq_k=src_seq, seq_q=src_seq, pad=self.pad)
+        non_pad_mask = get_non_pad_mask(src_seq, self.pad)
         
         # -- Forward
         enc_output = self.src_word_emb(src_seq) + self.position_enc(src_pos)
@@ -259,13 +261,15 @@ class Decoder(nn.Module):
             dropout=dropout
         ) for _ in range(n_layers)])
 
+        self.pad = pad
+
     def forward(self, enc_seq, enc_pos, return_attns=False):
 
         dec_slf_attn_list = []
 
         # -- Prepare masks
-        slf_attn_mask = get_attn_key_pad_mask(seq_k=enc_pos, seq_q=enc_pos)
-        non_pad_mask = get_non_pad_mask(enc_pos)
+        slf_attn_mask = get_attn_key_pad_mask(seq_k=enc_pos, seq_q=enc_pos, pad=self.pad)
+        non_pad_mask = get_non_pad_mask(enc_pos, pad=self.pad)
 
         # -- Forward
         dec_output = enc_seq + self.position_enc(enc_pos)

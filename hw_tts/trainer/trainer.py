@@ -10,11 +10,14 @@ from torch.nn.utils import clip_grad_norm_
 from torchvision.transforms import ToTensor
 from tqdm import tqdm
 
-from hw_asr.base import BaseTrainer
-from hw_asr.base.base_text_encoder import BaseTextEncoder
-from hw_asr.logger.utils import plot_spectrogram_to_buf
-from hw_asr.metric.utils import calc_cer, calc_wer
-from hw_asr.utils import inf_loop, MetricTracker
+from hw_tts.base import BaseTrainer
+from hw_tts.base.base_text_encoder import BaseTextEncoder
+from hw_tts.logger.utils import plot_spectrogram_to_buf
+from hw_tts.utils import inf_loop, MetricTracker
+import hw_tts.waveglow as waveglow
+import hw_tts.text as text_lib
+import hw_tts.audio as audio_lib
+from hw_tts.utils.util import get_WaveGlow
 
 
 class Trainer(BaseTrainer):
@@ -39,6 +42,8 @@ class Trainer(BaseTrainer):
         self.skip_oom = skip_oom
         self.config = config
         self.train_dataloader = dataloaders["train"]
+        self.WaveGlow = get_WaveGlow()
+        self.WaveGlow = self.WaveGlow.to(self.device)
         if len_epoch is None:
             # epoch-based training
             self.len_epoch = len(self.train_dataloader)
@@ -61,13 +66,13 @@ class Trainer(BaseTrainer):
         """
         Move all necessary tensors to the HPU
         """
-        for tensor_for_gpu in ["references",
-                               "references_length",
-                               "mixes",
-                               "mixes_length",
-                               "targets",
-                               "targets_length",
-                               "speaker_ids"]:
+        for tensor_for_gpu in ["text",
+                               "mel_target",
+                               "duration",
+                               "pitch",
+                               "energy",
+                               "mel_pos",
+                               "src_pos"]:
             batch[tensor_for_gpu] = batch[tensor_for_gpu].to(device)
         return batch
 
@@ -87,51 +92,52 @@ class Trainer(BaseTrainer):
         self.model.train()
         self.train_metrics.reset()
         self.writer.add_scalar("epoch", epoch)
-        for batch_idx, batch in enumerate(
+        for batch_idx_cut, batch_cut in enumerate(
                 tqdm(self.train_dataloader, desc="train", total=self.len_epoch)
         ):
-            try:
-                batch = self.process_batch(
-                    batch,
-                    is_train=True,
-                    metrics=self.train_metrics,
-                )
-            except RuntimeError as e:
-                if "out of memory" in str(e) and self.skip_oom:
-                    self.logger.warning("OOM on batch. Skipping batch.")
-                    for p in self.model.parameters():
-                        if p.grad is not None:
-                            del p.grad  # free some memory
-                    torch.cuda.empty_cache()
-                    continue
-                else:
-                    raise e
-            self.train_metrics.update("grad norm", self.get_grad_norm())
-            if batch_idx % self.log_step == 0:
-                self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
-                self.logger.debug(
-                    "Train Epoch: {} {} Loss: {:.6f}".format(
-                        epoch, self._progress(batch_idx), batch["loss"].item()
+            for batch_idx, batch in enumerate(batch_cut):
+                try:
+                    batch = self.process_batch(
+                        batch,
+                        is_train=True,
+                        metrics=self.train_metrics,
                     )
-                )
-                self.writer.add_scalar(
-                    "learning rate", self.optimizer.param_groups[0]['lr']
-                )
-                self._log_predictions(**batch, train=True)
-                self._log_scalars(self.train_metrics)
-                # we don't want to reset train metrics at the start of every epoch
-                # because we are interested in recent train metrics
-                last_train_metrics = self.train_metrics.result()
-                self.train_metrics.reset()
-            if batch_idx >= self.len_epoch:
-                break
+                except RuntimeError as e:
+                    if "out of memory" in str(e) and self.skip_oom:
+                        self.logger.warning("OOM on batch. Skipping batch.")
+                        for p in self.model.parameters():
+                            if p.grad is not None:
+                                del p.grad  # free some memory
+                        torch.cuda.empty_cache()
+                        continue
+                    else:
+                        raise e
+                self.train_metrics.update("grad norm", self.get_grad_norm())
+                if batch_idx % self.log_step == 0:
+                    self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
+                    self.logger.debug(
+                        "Train Epoch: {} {} Loss: {:.6f}".format(
+                            epoch, self._progress(batch_idx), batch["loss"].item()
+                        )
+                    )
+                    self.writer.add_scalar(
+                        "learning rate", self.lr_scheduler.get_last_lr()[0]
+                    )
+                    self._log_predictions(**batch, train=True)
+                    self._log_scalars(self.train_metrics)
+                    # we don't want to reset train metrics at the start of every epoch
+                    # because we are interested in recent train metrics
+                    last_train_metrics = self.train_metrics.result()
+                    self.train_metrics.reset()
+                if batch_idx >= self.len_epoch:
+                    break
         log = last_train_metrics
 
-        for part, dataloader in self.evaluation_dataloaders.items():
-            val_log = self._evaluation_epoch(epoch, part, dataloader)
-            log.update(**{f"{part}_{name}": value for name, value in val_log.items()})
+        # for part, dataloader in self.evaluation_dataloaders.items():
+        #     val_log = self._evaluation_epoch(epoch, part, dataloader)
+        #     log.update(**{f"{part}_{name}": value for name, value in val_log.items()})
         
-        self.lr_scheduler.step(log["val_loss"])
+        # self.lr_scheduler.step(log["val_loss"])
 
         return log
 
@@ -141,17 +147,18 @@ class Trainer(BaseTrainer):
             self.optimizer.zero_grad()
         outputs = self.model(**batch)
         batch.update(outputs)
-        batch["loss"] = self.criterion(**batch, train=is_train)
+        l1, l2, l3, l4 = self.criterion(**batch, train=is_train)
+        batch["loss"] = l1 + l2 + l3 + l4
         if is_train:
             batch["loss"].backward()
             self._clip_grad_norm()
             self.optimizer.step()
-            # if self.lr_scheduler is not None:
-            #     self.lr_scheduler.step()
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
 
         metrics.update("loss", batch["loss"].item())
         for met in self.metrics:
-            metrics.update(met.name, met(**batch), n=len(batch["mixes"]))
+            metrics.update(met.name, met(**batch), n=len(batch["text"]))
         return batch
 
     def _evaluation_epoch(self, epoch, part, dataloader):
@@ -195,14 +202,7 @@ class Trainer(BaseTrainer):
 
     def _log_predictions(
             self,
-            references,
-            mixes,
-            targets,
-            speaker_ids,
-            names,
-            short,
-            middle,
-            long,
+            mel_predicted,
             train=False,
             examples_to_log=10,
             *args,
@@ -211,16 +211,17 @@ class Trainer(BaseTrainer):
         # TODO: implement logging of beam search results
         if self.writer is None:
             return
-        tuples = list(zip(mixes, short, names, targets, references))
-        shuffle(tuples)
+        shuffle(mel_predicted)
         rows = {}
-        for mix, short_, name, target, reference in tuples[:examples_to_log]:
-            short_ = 20 * short_ / short_.norm(dim=-1, keepdim=True)
-            rows[name] = {
-                "mix": self.writer.wandb.Audio(mix[0].detach().cpu().numpy(), sample_rate=16000),
-                "short": self.writer.wandb.Audio(short_[0].detach().cpu().numpy(), sample_rate=16000),
-                "target": self.writer.wandb.Audio(target[0].detach().cpu().numpy(), sample_rate=16000),
-                "reference": self.writer.wandb.Audio(reference[0].detach().cpu().numpy(), sample_rate=16000),
+        i = 0
+        for mel in mel_predicted[:examples_to_log]:
+            i += 1
+            mel = mel.contiguous().transpose(-1, -2).unsqueeze(0)
+            a = waveglow.inference.get_wav(
+                mel, self.WaveGlow,
+            )
+            rows[f"{i}"] = {
+                "audio": self.writer.wandb.Audio(a, sample_rate=22050),
             }
         self.writer.add_table("predictions", pd.DataFrame.from_dict(rows, orient="index"))
 

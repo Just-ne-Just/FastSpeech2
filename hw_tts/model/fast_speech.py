@@ -5,6 +5,7 @@ from hw_tts.model.length_regulator import LengthRegulator
 from hw_tts.model.utils import get_mask_from_lengths
 from hw_tts.model.pitch_predictor import PitchPredictor
 from hw_tts.model.energy_predictor import EnergyPredictor
+import numpy as np
 
 class FastSpeech2(nn.Module):
     """ FastSpeech2 """
@@ -63,8 +64,8 @@ class FastSpeech2(nn.Module):
                                fft_conv1d_padding,
                                dropout)
         
-        self.pitch_bounds = torch.linspace(torch.log(min_pitch + 1), torch.log(max_pitch + 2), num_bins)
-        self.energy_bounds = torch.linspace(torch.log(min_energy + 1), torch.log(max_energy + 2), num_bins)
+        self.register_buffer('pitch_bounds', torch.linspace(np.log(min_pitch + 1), np.log(max_pitch + 2), num_bins))
+        self.register_buffer('energy_bounds', torch.linspace(np.log(min_energy + 1), np.log(max_energy + 2), num_bins))
 
         self.pitch_embedding = nn.Embedding(num_bins, encoder_dim)
         self.energy_embedding = nn.Embedding(num_bins, encoder_dim)
@@ -83,6 +84,7 @@ class FastSpeech2(nn.Module):
         )
 
         self.mel_linear = nn.Linear(decoder_dim, num_mels)
+        self.pad = pad
 
     def mask_tensor(self, mel_output, position, mel_max_length):
         lengths = torch.max(position, -1)[0]
@@ -91,41 +93,43 @@ class FastSpeech2(nn.Module):
         return mel_output.masked_fill(mask, 0.)
 
     def forward(self, 
-                src_seq, 
+                text, 
                 src_pos, 
                 mel_pos=None, 
-                mel_max_length=None, 
-                length_target=None, 
-                energy_target=None, 
-                pitch_target=None, 
-                alpha=1.0):
-        enc_output, _ = self.encoder(src_seq, src_pos)
+                mel_max_len=None, 
+                duration=None, 
+                energy=None, 
+                pitch=None, 
+                alpha=1.0,
+                *args, 
+                **kwargs):
+        enc_output, _ = self.encoder(text, src_pos)
 
         output, duration_prediction = self.length_regulator(enc_output, 
                                                             alpha, 
-                                                            target=length_target if self.training else None,
-                                                            mel_max_length=mel_max_length)
+                                                            target=duration if self.training else None,
+                                                            mel_max_length=mel_max_len)
         
         pitch_embedding, pitch_prediction = self.pitch_predictor.get_pitch(output, 
                                                                            pitch_bounds=self.pitch_bounds,
                                                                            pitch_embedding=self.pitch_embedding,
-                                                                           target=pitch_target if self.training else None, 
+                                                                           target=pitch if self.training else None, 
                                                                            alpha=alpha)
 
-        energy_embedding, energy_prediction = self.pitch_predictor.get_pitch(output, 
-                                                                             energy_bounds=self.energy_bounds,
-                                                                             energy_embedding=self.energy_embedding,
-                                                                             target=energy_target if self.training else None, 
-                                                                             alpha=alpha)
+        energy_embedding, energy_prediction = self.energy_predictor.get_energy(output, 
+                                                                               energy_bounds=self.energy_bounds,
+                                                                               energy_embedding=self.energy_embedding,
+                                                                               target=energy if self.training else None, 
+                                                                               alpha=alpha)
 
         output = self.decoder(output + pitch_embedding + energy_embedding, mel_pos)
 
-        output = self.mask_tensor(output, mel_pos, mel_max_length)
+        output = self.mask_tensor(output, mel_pos, mel_max_len)
         output = self.mel_linear(output)
 
         return {
-            "output": output, 
-            "duration_prediction": duration_prediction if self.training else None,
-            "pitch_prediction": pitch_prediction if self.training else None,
-            "energy_prediction": energy_prediction if self.training else None
+            "mel_predicted": output, 
+            "duration_predicted": duration_prediction if self.training else None,
+            "pitch_predicted": pitch_prediction if self.training else None,
+            "energy_predicted": energy_prediction if self.training else None
         }

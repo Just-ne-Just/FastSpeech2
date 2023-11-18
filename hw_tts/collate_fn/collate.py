@@ -12,14 +12,14 @@ def collate_fn(batch):
     len_arr = np.array([d["text"].size(0) for d in batch])
     index_arr = np.argsort(-len_arr)
     batchsize = len(batch)
-    real_batchsize = batchsize // batch["batch_expand_size"]
+    real_batchsize = batchsize // batch[0]["batch_expand_size"]
 
     cut_list = list()
-    for i in range(batch["batch_expand_size"]):
-        cut_list.append(index_arr[i*real_batchsize:(i+1)*real_batchsize])
+    for i in range(batch[0]["batch_expand_size"]):
+        cut_list.append(index_arr[i*real_batchsize:(i + 1)*real_batchsize])
 
     output = list()
-    for i in range(batch["batch_expand_size"]):
+    for i in range(batch[0]["batch_expand_size"]):
         output.append(reprocess_tensor(batch, cut_list[i]))
 
     return output

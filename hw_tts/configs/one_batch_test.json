@@ -2,7 +2,7 @@
   "name": "one_batch_test",
   "n_gpu": 1,
   "preprocessing": {
-    "sr": 16000,
+    "sr": 22050,
     "spectrogram": {
       "type": "MelSpectrogram",
       "args": {
@@ -17,111 +17,80 @@
     ]
   },
   "arch": {
-    "type": "SpEx",
+    "type": "FastSpeech2",
     "args": {
-      "short_length": 20, 
-      "middle_length": 80,
-      "long_length": 160,
-      "in_channels": 32,
-      "stack_size": 8,
-      "num_stacks": 4,
-      "kernel_size": 3,
-      "proj_channels": 32,
-      "out_channels": 64, 
-      "speaker_dim": 32
+      "max_seq_len": 3000, 
+      "encoder_n_layer": 4, 
+      "vocab_size": 300, 
+      "encoder_dim": 256, 
+      "encoder_head": 2, 
+      "pad": 0, 
+      "encoder_conv1d_filter_size": 1024,
+      "fft_conv1d_kernel": [9, 1],
+      "fft_conv1d_padding": [4, 0],
+      "decoder_n_layer": 4,
+      "decoder_dim": 256,
+      "decoder_head": 2,
+      "decoder_conv1d_filter_size": 1024,
+      "duration_predictor_filter_size": 256,
+      "duration_predictor_kernel_size": 3,
+      "pitch_predictor_filter_size": 256,
+      "pitch_predictor_kernel_size": 3,
+      "energy_predictor_filter_size": 256,
+      "energy_predictor_kernel_size": 3,
+      "num_mels": 80,
+      "num_bins": 256,
+      "dropout": 0.1
     }
   },
   "data": {
     "train": {
-      "batch_size": 4,
+      "batch_size": 20,
+      "batch_expand_size": 10,
       "num_workers": 0,
       "datasets": [
-        {
-          "type": "LibrispeechTripletDataset",
-          "args": {
-            "mixer_config": {
-              "nfiles": 10000,
-              "test": false,
-              "path": "D:\\asr_project_template\\data\\datasets\\librispeech\\mixer",
-              "snr_levels": [-5, 5],
-              "num_workers": 2,
-              "trim_db": 20,
-              "vad_db": 20,
-              "audio_len": 3
-            },
-            "part": "dev-clean",
-            "limit": 4
+          {
+              "type": "LJspeechDataset",
+              "args": {
+                  "data_path": "D:\\FastSpeech2\\data\\datasets\\alignment\\train.txt",
+                  "wav_path": "D:\\FastSpeech2\\data\\datasets\\LJspeech-1.1",
+                  "mel_ground_truth": "D:\\FastSpeech2\\data\\datasets\\mels",
+                  "alignment_path": "D:\\FastSpeech2\\data\\datasets\\alignments",
+                  "text_cleaners": ["english_cleaners"],
+                  "pitch_path": "D:\\FastSpeech2\\data\\datasets\\pitch",
+                  "energy_path": "D:\\FastSpeech2\\data\\datasets\\energy",
+                  "batch_expand_size": 10
+              }
           }
-        }
-      ]
-    },
-    "val": {
-      "batch_size": 4,
-      "num_workers": 0,
-      "datasets": [
-        {
-          "type": "LibrispeechTripletDataset",
-          "args": {
-            "mixer_config": {
-              "nfiles": 10000,
-              "test": true,
-              "path": "D:\\asr_project_template\\data\\datasets\\librispeech\\mixer",
-              "snr_levels": [-5, 5],
-              "num_workers": 2,
-              "vad_db": 20,
-              "audio_len": 3
-            },
-            "part": "dev-clean",
-            "limit": 4
-          }
-        }
       ]
     }
   },
   "optimizer": {
     "type": "AdamW",
     "args": {
-      "lr": 1e-3,
+      "lr": 3e-4,
       "weight_decay": 1e-5
     }
   },
   "loss": {
-    "type": "SISDRLoss",
+    "type": "TTSLoss",
     "args": {
     }
   },
   "metrics": [
-    {
-      "type": "SISDRMetric",
-      "args": {
-        "name": "SI-SDR"
-      }
-    },
-    {
-      "type": "AccuracyMetric",
-      "args": {
-        "name": "ACCURACY"
-      }
-    },
-    {
-      "type": "PESQMetric",
-      "args": {
-        "name": "PESQ"
-      }
-    }
   ],
   "lr_scheduler": {
-    "type": "ReduceLROnPlateau",
+    "type": "OneCycleLR",
     "args": {
-      "mode": "min",
-      "factor": 0.5,
-      "patience": 1,
-      "min_lr": 0.0,
-      "verbose": true
+      "steps_per_epoch": 1000,
+      "epochs": 60,
+      "anneal_strategy": "cos",
+      "max_lr": 3e-4,
+      "pct_start": 0.2
     }
   },
   "trainer": {
-    "epochs": 50,
+    "epochs": 60,
     "save_dir": "saved/",
     "save_period": 5,
     "verbosity": 2,
@@ -129,7 +98,7 @@
     "early_stop": 100,
     "visualize": "wandb",
     "wandb_project": "ss_project",
-    "len_epoch": 100,
+    "len_epoch": 1000,
     "grad_norm_clip": 10
   }
 }

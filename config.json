@@ -52,13 +52,13 @@
           {
               "type": "LJspeechDataset",
               "args": {
-                  "data_path": "D:\\FastSpeech2\\data\\datasets\\alignment\\train.txt",
-                  "wav_path": "D:\\FastSpeech2\\data\\datasets\\LJspeech-1.1",
-                  "mel_ground_truth": "D:\\FastSpeech2\\data\\datasets\\mels",
-                  "alignment_path": "D:\\FastSpeech2\\data\\datasets\\alignments",
+                  "data_path": "/kaggle/input/tts-dataset/alignment/alignment/train.txt",
+                  "wav_path": "/kaggle/input/tts-dataset/LJSpeech-1.1",
+                  "mel_ground_truth": "/kaggle/input/tts-dataset/mel/mels",
+                  "alignment_path": "/kaggle/input/tts-dataset/alignments/alignments",
                   "text_cleaners": ["english_cleaners"],
-                  "pitch_path": "D:\\FastSpeech2\\data\\datasets\\pitch",
-                  "energy_path": "D:\\FastSpeech2\\data\\datasets\\energy",
+                  "pitch_path": "/kaggle/input/tts-dataset/pitch/pitch",
+                  "energy_path": "/kaggle/input/tts-dataset/energy/energy",
                   "batch_expand_size": 10
               }
           }
@@ -97,7 +97,7 @@
     "monitor": "min val_loss",
     "early_stop": 100,
     "visualize": "wandb",
-    "wandb_project": "ss_project",
+    "wandb_project": "tts_project",
     "len_epoch": 1000,
     "grad_norm_clip": 10
   }

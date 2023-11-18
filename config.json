@@ -45,8 +45,8 @@
   },
   "data": {
     "train": {
-      "batch_size": 64,
-      "batch_expand_size": 64,
+      "batch_size": 128,
+      "batch_expand_size": 128,
       "num_workers": 0,
       "datasets": [
           {
@@ -59,7 +59,7 @@
                   "text_cleaners": ["english_cleaners"],
                   "pitch_path": "/kaggle/input/tts-dataset/pitch/pitch",
                   "energy_path": "/kaggle/input/tts-dataset/energy/energy",
-                  "batch_expand_size": 64
+                  "batch_expand_size": 128
               }
           }
       ]

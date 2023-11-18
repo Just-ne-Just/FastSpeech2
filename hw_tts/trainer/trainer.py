@@ -93,10 +93,13 @@ class Trainer(BaseTrainer):
         self.model.train()
         self.train_metrics.reset()
         self.writer.add_scalar("epoch", epoch)
+
+        bar = tqdm(range(self.len_epoch), desc='train')
         for batch_idx_cut, batch_cut in enumerate(
-                tqdm(self.train_dataloader, desc="train", total=self.len_epoch)
+                self.train_dataloader
         ):
             for batch_idx, batch in enumerate(batch_cut):
+                bar.update(1)
                 try:
                     batch = self.process_batch(
                         batch,

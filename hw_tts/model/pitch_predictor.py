@@ -20,6 +20,6 @@ class PitchPredictor(Predictor):
         else:
             pitch_prediction = self.forward(x)
             energy_prediction_pred = pitch_prediction * alpha
-            embedding = pitch_embedding(torch.bucketize(energy_prediction_pred, pitch_bounds))
+            embedding = pitch_embedding(torch.bucketize(torch.log(energy_prediction_pred), pitch_bounds))
         
         return embedding, pitch_prediction

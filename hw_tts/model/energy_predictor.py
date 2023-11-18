@@ -20,6 +20,6 @@ class EnergyPredictor(Predictor):
         else:
             energy_prediction = self.forward(x)
             energy_prediction_pred = energy_prediction * alpha
-            embedding = energy_embedding(torch.bucketize(energy_prediction_pred, energy_bounds))
+            embedding = energy_embedding(torch.bucketize(torch.log(energy_prediction_pred), energy_bounds))
         
         return embedding, energy_prediction

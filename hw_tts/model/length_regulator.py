@@ -31,7 +31,7 @@ class LengthRegulator(nn.Module):
     def forward(self, x, alpha=1.0, target=None, mel_max_length=None):
         if target is None:
             duration_prediction = self.duration_predictor(x)
-            duration_prediction = ((torch.exp(duration_prediction - 1) + 0.5) * alpha).int()
+            duration_prediction = ((torch.exp(duration_prediction) - 1) * alpha + 0.5).int()
             output = self.LR(x, duration_prediction)
             mel_pos = torch.stack([torch.Tensor([i + 1 for i in range(output.size(1))])]).long().to(x.device)
             return output, mel_pos

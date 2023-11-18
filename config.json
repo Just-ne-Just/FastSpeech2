@@ -45,9 +45,9 @@
   },
   "data": {
     "train": {
-      "batch_size": 20,
-      "batch_expand_size": 10,
-      "num_workers": 0,
+      "batch_size": 16,
+      "batch_expand_size": 1,
+      "num_workers": 2,
       "datasets": [
           {
               "type": "LJspeechDataset",
@@ -59,7 +59,7 @@
                   "text_cleaners": ["english_cleaners"],
                   "pitch_path": "/kaggle/input/tts-dataset/pitch/pitch",
                   "energy_path": "/kaggle/input/tts-dataset/energy/energy",
-                  "batch_expand_size": 10
+                  "batch_expand_size": 1
               }
           }
       ]

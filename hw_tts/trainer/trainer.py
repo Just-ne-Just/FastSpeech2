@@ -18,6 +18,7 @@ import hw_tts.waveglow as waveglow
 import hw_tts.text as text_lib
 import hw_tts.audio as audio_lib
 from hw_tts.utils.util import get_WaveGlow
+import time
 
 
 class Trainer(BaseTrainer):
@@ -142,15 +143,23 @@ class Trainer(BaseTrainer):
         return log
 
     def process_batch(self, batch, is_train: bool, metrics: MetricTracker):
+        start = time.time()
         batch = self.move_batch_to_device(batch, self.device)
+        print("batch to device time", time.time() - start)
         if is_train:
             self.optimizer.zero_grad()
+        start = time.time()
         outputs = self.model(**batch)
+        print("inference time", time.time() - start)
         batch.update(outputs)
+        start = time.time()
         l1, l2, l3, l4 = self.criterion(**batch, train=is_train)
+        print("loss time", time.time() - start)
         batch["loss"] = l1 + l2 + l3 + l4
         if is_train:
+            start = time.time()
             batch["loss"].backward()
+            print("backward time", time.time() - start)
             self._clip_grad_norm()
             self.optimizer.step()
             if self.lr_scheduler is not None:

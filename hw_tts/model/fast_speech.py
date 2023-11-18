@@ -122,7 +122,7 @@ class FastSpeech2(nn.Module):
                                                                                target=energy if self.training else None, 
                                                                                alpha=alpha)
 
-        print(output.shape, pitch_embedding.shape, energy_embedding.shape)
+        # print(output.shape, pitch_embedding.shape, energy_embedding.shape)
         output = self.decoder(output + pitch_embedding + energy_embedding, mel_pos)
 
         output = self.mask_tensor(output, mel_pos, mel_max_len)

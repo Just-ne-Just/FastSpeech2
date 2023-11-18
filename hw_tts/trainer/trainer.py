@@ -42,8 +42,8 @@ class Trainer(BaseTrainer):
         self.skip_oom = skip_oom
         self.config = config
         self.train_dataloader = dataloaders["train"]
-        self.WaveGlow = get_WaveGlow()
-        self.WaveGlow = self.WaveGlow.to(self.device)
+        # self.WaveGlow = get_WaveGlow()
+        # self.WaveGlow = self.WaveGlow.to(self.device)
         if len_epoch is None:
             # epoch-based training
             self.len_epoch = len(self.train_dataloader)
@@ -123,7 +123,7 @@ class Trainer(BaseTrainer):
                     self.writer.add_scalar(
                         "learning rate", self.lr_scheduler.get_last_lr()[0]
                     )
-                    self._log_predictions(**batch, train=True)
+                    # self._log_predictions(**batch, train=True)
                     self._log_scalars(self.train_metrics)
                     # we don't want to reset train metrics at the start of every epoch
                     # because we are interested in recent train metrics

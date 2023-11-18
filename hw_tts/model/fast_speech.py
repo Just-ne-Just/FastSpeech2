@@ -103,6 +103,7 @@ class FastSpeech2(nn.Module):
                 alpha=1.0,
                 *args, 
                 **kwargs):
+        print(text.shape)
         enc_output, _ = self.encoder(text, src_pos)
 
         output, duration_prediction = self.length_regulator(enc_output, 

@@ -53,7 +53,7 @@ class Trainer(BaseTrainer):
             self.train_dataloader = inf_loop(self.train_dataloader)
             self.len_epoch = len_epoch
         self.evaluation_dataloaders = {k: v for k, v in dataloaders.items() if k != "train"}
-        self.log_step = 2
+        self.log_step = 50
 
         self.train_metrics = MetricTracker(
             "loss", "grad norm", *[m.name for m in self.metrics if 'LM' not in m.name], writer=self.writer
@@ -95,11 +95,13 @@ class Trainer(BaseTrainer):
         self.writer.add_scalar("epoch", epoch)
 
         bar = tqdm(range(self.len_epoch), desc='train')
+        i = 0
         for batch_idx_cut, batch_cut in enumerate(
                 self.train_dataloader
         ):
             for batch_idx, batch in enumerate(batch_cut):
                 bar.update(1)
+                i += 1
                 try:
                     batch = self.process_batch(
                         batch,
@@ -117,7 +119,7 @@ class Trainer(BaseTrainer):
                     else:
                         raise e
                 self.train_metrics.update("grad norm", self.get_grad_norm())
-                if batch_idx_cut % self.log_step == 0:
+                if i % self.log_step == 0:
                     self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
                     self.logger.debug(
                         "Train Epoch: {} {} Loss: {:.6f}".format(
@@ -133,7 +135,7 @@ class Trainer(BaseTrainer):
                     # because we are interested in recent train metrics
                     last_train_metrics = self.train_metrics.result()
                     self.train_metrics.reset()
-                if batch_idx >= self.len_epoch:
+                if i >= self.len_epoch:
                     break
         log = last_train_metrics
 

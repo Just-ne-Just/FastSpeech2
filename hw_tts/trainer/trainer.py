@@ -99,6 +99,7 @@ class Trainer(BaseTrainer):
         for batch_idx_cut, batch_cut in enumerate(
                 self.train_dataloader
         ):
+            stop = False
             for batch_idx, batch in enumerate(batch_cut):
                 bar.update(1)
                 i += 1
@@ -119,8 +120,8 @@ class Trainer(BaseTrainer):
                     else:
                         raise e
                 self.train_metrics.update("grad norm", self.get_grad_norm())
-                if i % self.log_step == 0:
-                    self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
+                if (batch_idx + batch_idx_cut * self.config["batch_expand_size"]) % self.log_step == 0:
+                    self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx + batch_idx_cut * self.config["batch_expand_size"])
                     self.logger.debug(
                         "Train Epoch: {} {} Loss: {:.6f}".format(
                             epoch, self._progress(batch_idx), batch["loss"].item()
@@ -129,14 +130,17 @@ class Trainer(BaseTrainer):
                     self.writer.add_scalar(
                         "learning rate", self.lr_scheduler.get_last_lr()[0]
                     )
-                    self._log_predictions(**batch, train=True)
+                    self._log_predictions(**batch, train=True, examples_to_log=1)
                     self._log_scalars(self.train_metrics)
                     # we don't want to reset train metrics at the start of every epoch
                     # because we are interested in recent train metrics
                     last_train_metrics = self.train_metrics.result()
                     self.train_metrics.reset()
                 if i >= self.len_epoch:
+                    stop = True
                     break
+            if stop:
+                break
         log = last_train_metrics
 
         # for part, dataloader in self.evaluation_dataloaders.items():

@@ -120,8 +120,8 @@ class Trainer(BaseTrainer):
                     else:
                         raise e
                 self.train_metrics.update("grad norm", self.get_grad_norm())
-                if (batch_idx + batch_idx_cut * self.config["batch_expand_size"]) % self.log_step == 0:
-                    self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx + batch_idx_cut * self.config["batch_expand_size"])
+                if (batch_idx + batch_idx_cut * self.config["data"]["train"]["batch_expand_size"]) % self.log_step == 0:
+                    self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx + batch_idx_cut * self.config["data"]["train"]["batch_expand_size"])
                     self.logger.debug(
                         "Train Epoch: {} {} Loss: {:.6f}".format(
                             epoch, self._progress(batch_idx), batch["loss"].item()

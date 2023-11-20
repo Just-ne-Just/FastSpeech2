@@ -130,7 +130,7 @@ class Trainer(BaseTrainer):
                     self.writer.add_scalar(
                         "learning rate", self.lr_scheduler.get_last_lr()[0]
                     )
-                    self._log_predictions(**batch, train=True, examples_to_log=1)
+                    self._log_predictions(**batch, train=True, examples_to_log=1, audio_name=str(batch_idx + batch_idx_cut * self.config["data"]["train"]["batch_expand_size"]))
                     self._log_scalars(self.train_metrics)
                     # we don't want to reset train metrics at the start of every epoch
                     # because we are interested in recent train metrics
@@ -230,19 +230,15 @@ class Trainer(BaseTrainer):
         # TODO: implement logging of beam search results
         if self.writer is None:
             return
-        zipped = list(zip(mel_predicted, audio_name))
-        shuffle(zipped)
+        shuffle(mel_predicted)
         rows = {}
-        i = 0
-        for mel, name in zipped[:examples_to_log]:
-            i += 1
+        for mel in mel_predicted[:examples_to_log]:
             mel = mel.contiguous().transpose(-1, -2).unsqueeze(0)
             a = waveglow.inference.get_wav(
                 mel, self.WaveGlow,
             )
-            rows[name] = {
+            rows[audio_name] = {
                 "audio": self.writer.wandb.Audio(a, sample_rate=22050),
-                "name": name
             }
         self.writer.add_table("predictions", pd.DataFrame.from_dict(rows, orient="index"))
 

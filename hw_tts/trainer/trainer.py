@@ -221,6 +221,7 @@ class Trainer(BaseTrainer):
     def _log_predictions(
             self,
             mel_predicted,
+            audio_name,
             train=False,
             examples_to_log=10,
             *args,
@@ -229,17 +230,19 @@ class Trainer(BaseTrainer):
         # TODO: implement logging of beam search results
         if self.writer is None:
             return
-        shuffle(mel_predicted)
+        zipped = list(zip(mel_predicted, audio_name))
+        shuffle(zipped)
         rows = {}
         i = 0
-        for mel in mel_predicted[:examples_to_log]:
+        for mel, name in zipped[:examples_to_log]:
             i += 1
             mel = mel.contiguous().transpose(-1, -2).unsqueeze(0)
             a = waveglow.inference.get_wav(
                 mel, self.WaveGlow,
             )
-            rows[f"{i}"] = {
+            rows[name] = {
                 "audio": self.writer.wandb.Audio(a, sample_rate=22050),
+                "name": name
             }
         self.writer.add_table("predictions", pd.DataFrame.from_dict(rows, orient="index"))
 

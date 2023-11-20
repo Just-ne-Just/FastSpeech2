@@ -218,7 +218,8 @@ def get_data_to_buffer(data_path,
                        "mel_target": mel_gt_target,
                        "pitch": pitch_gt_target,
                        "energy": energy_gt_target,
-                       "batch_expand_size": batch_expand_size})
+                       "batch_expand_size": batch_expand_size,
+                       "audio_name": ("ljspeech-%05d" % (i + 1))})
 
     end = time.perf_counter()
     print("cost {:.2f}s to load all data into buffer.".format(end-start))

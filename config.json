@@ -68,8 +68,8 @@
   "optimizer": {
     "type": "AdamW",
     "args": {
-      "lr": 3e-4,
-      "weight_decay": 1e-5
+      "lr": 1e-3,
+      "weight_decay": 1e-6
     }
   },
   "loss": {
@@ -85,12 +85,12 @@
       "steps_per_epoch": 3000,
       "epochs": 60,
       "anneal_strategy": "cos",
-      "max_lr": 3e-4,
+      "max_lr": 1e-3,
       "pct_start": 0.2
     }
   },
   "trainer": {
-    "epochs": 90,
+    "epochs": 135,
     "save_dir": "saved/",
     "save_period": 5,
     "verbosity": 2,

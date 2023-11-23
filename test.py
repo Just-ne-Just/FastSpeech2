@@ -21,13 +21,12 @@ DEFAULT_CHECKPOINT_PATH = ROOT_PATH / "default_test_model" / "checkpoint.pth"
 sr = 22050
 
 def main(config, txt_path, out_dir):
+    Path(out_dir).mkdir(exist_ok=True, parents=True)
     logger = config.get_logger("test")
 
     # define cpu or gpu if possible
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # setup data_loader instances
-    dataloaders = get_dataloaders(config)
 
     # build model architecture
     model = config.init_obj(config["arch"], module_model)

@@ -68,6 +68,8 @@ class LJspeechDataset(Dataset):
         else:
             self._get_pitch_bounds(pitch_path)
         
+        print("Energy bounds:", self.max_energy, self.min_energy)
+        print("Pitch bounds:", self.max_pitch, self.min_pitch)
 
 
         self.buffer = get_data_to_buffer(data_path,

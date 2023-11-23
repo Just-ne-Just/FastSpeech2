@@ -63,7 +63,7 @@ def main(config, txt_path, out_dir):
                                 beta=b, 
                                 gamma=g)
                 
-                inference(outputs["mel_predicted"].transpose(1, 2), waveglow, os.path.join(out_dir, f"audio_{i + 1}_a_{a}_b_{b}_g_{g}"), sampling_rate=sr)
+                inference(outputs["mel_predicted"].transpose(1, 2), waveglow, os.path.join(out_dir, f"audio_{i + 1}_a_{a}_b_{b}_g_{g}.wav"), sampling_rate=sr)
 
 
 if __name__ == "__main__":

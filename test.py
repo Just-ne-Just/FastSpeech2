@@ -57,7 +57,7 @@ def main(config, txt_path, out_dir):
             for a, b, g in config["scale"]:
                 text = torch.tensor(tokenized_text, device=device).unsqueeze(0)
                 src_pos = torch.tensor([i + 1 for i in range(len(tokenized_text))], device=device).unsqueeze(0)
-                outputs = model(src_seq=text, 
+                outputs = model(text=text, 
                                 src_pos=src_pos,
                                 alpha=a, 
                                 beta=b, 

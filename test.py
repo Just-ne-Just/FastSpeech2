@@ -13,11 +13,14 @@ from hw_tts.utils import ROOT_PATH
 from hw_tts.utils.object_loading import get_dataloaders
 from hw_tts.utils import MetricTracker
 from hw_tts.utils.parse_config import ConfigParser
+from hw_tts.utils.util import get_WaveGlow
+from hw_tts.text import text_to_sequence
+from hw_tts.waveglow.inference import inference
 
 DEFAULT_CHECKPOINT_PATH = ROOT_PATH / "default_test_model" / "checkpoint.pth"
+sr = 22050
 
-
-def main(config, out_file):
+def main(config, txt_path, out_dir):
     logger = config.get_logger("test")
 
     # define cpu or gpu if possible
@@ -27,7 +30,7 @@ def main(config, out_file):
     dataloaders = get_dataloaders(config)
 
     # build model architecture
-    model = config.init_obj(config["arch"], module_model, n_speakers=251)
+    model = config.init_obj(config["arch"], module_model)
     logger.info(model)
 
     logger.info("Loading checkpoint: {} ...".format(config.resume))
@@ -37,33 +40,31 @@ def main(config, out_file):
         model = torch.nn.DataParallel(model)
     model.load_state_dict(state_dict)
 
+    waveglow = get_WaveGlow()
+
     # prepare model for testing
     print(f"DEVICE: {device}")
     model = model.to(device)
     model.eval()
 
-    results = []
-    metrics = []
-    for metric in config["metrics"]:
-        metrics.append(config.init_obj(metric, module_metric))
+    with open(txt_path, 'r', encoding="utf-8") as f:
+        texts = list(map(lambda x: x.strip(), f.readlines()))
+    
+    cleaners = ["english_cleaners"]
+    encoded_texts = [text_to_sequence(text, cleaners) for text in texts]
 
     with torch.no_grad():
-        evaluation_metrics = MetricTracker(
-            *[metric.name for metric in metrics]
-        )
-        for batch_num, batch in enumerate(tqdm(dataloaders["test"])):
-            batch = Trainer.move_batch_to_device(batch, device)
-            output = model(**batch)
-            if type(output) is dict:
-                batch.update(output)
-            else:
-                batch["logits"] = output
-            
-            for metric in metrics:
-                evaluation_metrics.update(metric.name, metric(**batch))
-    
-    with Path(out_file).open("w") as f:
-        json.dump(str(evaluation_metrics.result()), f, indent=2)
+        for i, tokenized_text in enumerate(encoded_texts):
+            for a, b, g in config["scale"]:
+                text = torch.tensor(tokenized_text, device=device).unsqueeze(0)
+                src_pos = torch.tensor([i + 1 for i in range(len(tokenized_text))], device=device).unsqueeze(0)
+                outputs = model(src_seq=text, 
+                                src_pos=src_pos,
+                                alpha=a, 
+                                beta=b, 
+                                gamma=g)
+                
+                inference(outputs["mel_predicted"].transpose(1, 2), waveglow, os.path.join(out_dir, f"audio_{i + 1}_a_{a}_b_{b}_g_{g}"), sampling_rate=sr)
 
 
 if __name__ == "__main__":
@@ -92,30 +93,16 @@ if __name__ == "__main__":
     args.add_argument(
         "-o",
         "--output",
-        default="output.json",
+        default="./",
         type=str,
-        help="File to write results (.json)",
+        help="output dir",
     )
     args.add_argument(
         "-t",
-        "--test-data-folder",
-        default=None,
+        "--txt",
+        default="input.txt",
         type=str,
-        help="Path to dataset",
-    )
-    args.add_argument(
-        "-b",
-        "--batch-size",
-        default=20,
-        type=int,
-        help="Test dataset batch size",
-    )
-    args.add_argument(
-        "-j",
-        "--jobs",
-        default=1,
-        type=int,
-        help="Number of workers for test dataloader",
+        help="path to input txt file",
     )
 
     args = args.parse_args()
@@ -136,28 +123,5 @@ if __name__ == "__main__":
             config.config.update(json.load(f))
 
     # if `--test-data-folder` was provided, set it as a default test set
-    if args.test_data_folder is not None:
-        test_data_folder = Path(args.test_data_folder).absolute().resolve()
-        assert test_data_folder.exists()
-        config.config["data"] = {
-            "test": {
-                "batch_size": args.batch_size,
-                "num_workers": args.jobs,
-                "datasets": [
-                    {
-                        "type": "CustomDirTripletDataset",
-                        "args": {
-                            "mix_path": str(test_data_folder / "mix"),
-                            "ref_path": str(test_data_folder / "refs"),
-                            "target_path": str(test_data_folder / "targets")
-                        },
-                    }
-                ],
-            }
-        }
-    print(config.config["data"])
-    assert config.config.get("data", {}).get("test", None) is not None
-    config["data"]["test"]["batch_size"] = args.batch_size
-    config["data"]["test"]["n_jobs"] = args.jobs
 
-    main(config, args.output)
+    main(config, args.txt, args.output)

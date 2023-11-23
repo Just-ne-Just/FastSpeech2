@@ -101,6 +101,8 @@ class FastSpeech2(nn.Module):
                 energy=None, 
                 pitch=None, 
                 alpha=1.0,
+                beta=1.0,
+                gamma=1.0,
                 *args, 
                 **kwargs):
         enc_output, _ = self.encoder(text, src_pos)
@@ -114,13 +116,13 @@ class FastSpeech2(nn.Module):
                                                                            pitch_bounds=self.pitch_bounds,
                                                                            pitch_embedding=self.pitch_embedding,
                                                                            target=pitch if self.training else None, 
-                                                                           alpha=alpha)
+                                                                           alpha=beta)
 
         energy_embedding, energy_prediction = self.energy_predictor.get_energy(output, 
                                                                                energy_bounds=self.energy_bounds,
                                                                                energy_embedding=self.energy_embedding,
                                                                                target=energy if self.training else None, 
-                                                                               alpha=alpha)
+                                                                               alpha=gamma)
 
         # print(output.shape, pitch_embedding.shape, energy_embedding.shape)
         output = self.decoder(output + pitch_embedding + energy_embedding, mel_pos)

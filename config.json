@@ -16,6 +16,17 @@
     "spectrogram": [
     ]
   },
+  "scale": [
+    [1, 1, 1],
+    [1.2, 1, 1],
+    [1, 1.2, 1],
+    [1, 1, 1.2],
+    [0.8, 1, 1],
+    [1, 0.8, 1],
+    [1, 1, 0.8],
+    [1.2, 1.2, 1.2],
+    [0.8, 0.8, 0.8]
+  ],
   "arch": {
     "type": "FastSpeech2",
     "args": {
@@ -40,7 +51,11 @@
       "energy_predictor_kernel_size": 3,
       "num_mels": 80,
       "num_bins": 256,
-      "dropout": 0.1
+      "dropout": 0.1,
+      "max_energy": 91.4197,
+      "min_energy": 44.11204,
+      "max_pitch": 887.2688230720692,
+      "min_pitch": 282.49584931589294
     }
   },
   "data": {

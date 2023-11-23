@@ -34,17 +34,16 @@ from hw_tts.waveglow.mel2samp import files_to_list, MAX_WAV_VALUE
 def inference(mel, waveglow, audio_path, sigma=1.0, sampling_rate=22050):
     with torch.no_grad():
         audio = waveglow.infer(mel, sigma=sigma)
-        audio = audio * MAX_WAV_VALUE
+        audio = audio
     audio = audio.squeeze()
     audio = audio.detach().cpu().numpy()
-    audio = audio.astype('int16')
     write(audio_path, sampling_rate, audio)
 
 
 def test_speed(mel, waveglow, sigma=1.0, sampling_rate=22050):
     with torch.no_grad():
         audio = waveglow.infer(mel, sigma=sigma)
-        audio = audio * MAX_WAV_VALUE
+        audio = audio
 
 
 def get_wav(mel, waveglow, sigma=1.0, sampling_rate=22050):
@@ -52,5 +51,4 @@ def get_wav(mel, waveglow, sigma=1.0, sampling_rate=22050):
         audio = waveglow.infer(mel, sigma=sigma)
     audio = audio.squeeze()
     audio = audio.detach().cpu().numpy()
-
     return audio

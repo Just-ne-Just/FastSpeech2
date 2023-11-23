@@ -14,7 +14,7 @@ class EnergyPredictor(Predictor):
                                               dropout)
     
     def get_energy(self, x, energy_bounds, energy_embedding, target=None, alpha=1.0):
-        if target is None:
+        if target is not None:
             energy_prediction = self.forward(x)
             embedding = energy_embedding(torch.bucketize(torch.log(target + 1), energy_bounds))
         else:

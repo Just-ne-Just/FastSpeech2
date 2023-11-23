@@ -14,7 +14,7 @@ class PitchPredictor(Predictor):
                                               dropout)
     
     def get_pitch(self, x, pitch_bounds, pitch_embedding, target=None, alpha=1.0):
-        if target is None:
+        if target is not None:
             pitch_prediction = self.forward(x)
             embedding = pitch_embedding(torch.bucketize(torch.log(target + 1), pitch_bounds))
         else:

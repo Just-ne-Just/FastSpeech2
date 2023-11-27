@@ -16,7 +16,7 @@ pip install -r ./requirements.tx
 ```
 ```
 Запуск test: python3 test.py -c config.json -r tts-checkpoint/model.pth -o audio
-Файл, куда писать фразы ждя озвучки - input.txt
+Файл, куда писать фразы для озвучки - input.txt
 ```
 ## Описание проекта
 TTS английской речи

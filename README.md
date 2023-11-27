@@ -1,4 +1,4 @@
-# ASR project barebones
+# TTS project barebones
 ## Автор
 Семаков Андрей Игоревич
 ## Лицензия
@@ -6,41 +6,30 @@
 ## Installation guide
 
 ```shell
-pip install -r ./requirements.txt - версии указал, по идее, все должно заработать
+pip install -r ./requirements.tx
 ```
 ```
-Веса asr модели можно скачать с помощью git lfs pull. Самые крутые веса лежат в saved/models/default_config/success_360_512_aug/model_best.pth
-```
-```
-Веса lm модели можно скачать тут https://www.kaggle.com/datasets/leonbebra/lm-model
+Веса tts модели можно скачать тут https://www.kaggle.com/datasets/tomasbebra/tts-checkpoint
 ```
 ```
 Запуск train: python train.py -c <путь до конфига> -r <путь до чекпоинта>
-Желательно перед этим прописать в config.py корректные пути до датасетов и поставить в конфиге text_encoder.lm = False и убрать из конфига LMWERMetric, LMCERMetric
 ```
 ```
-Запуск test: python test.py -c <путь до конфига, где есть data.test> -r <путь до чекпоинта> -b <число, размер батча> -o <имя выходного файла> -t <путь до кастомного тестового датасета (лучше не использовать)> -j <количество потоков>
-Метрики считаются сами и выписани в самом низу выходного файла (под всеми предсказаниями)
-```
-## LM model weights
-```
-https://www.kaggle.com/datasets/leonbebra/lm-model
+Запуск test: python3 test.py -c config.json -r tts-checkpoint/model.pth -o audio
+Файл, куда писать фразы ждя озвучки - input.txt
 ```
 ## Описание проекта
-ASR английской речи
+TTS английской речи
 
 ## Структура репозитория
 ```
 train.py - скрипт, с помощью которого запускается обучение модели
 ```
 ```
-test.py - скрипт, с помощью которого запускается инференс модели на тестовом датасете
+test.py - скрипт, с помощью которого запускается инференс модели
 ```
 ```
-asr_project/config.json - основной конфиг, который используется для теста и обучения 
-```
-```
-asr_project/hw_asr - все остальные сурсы 
+config.json - основной конфиг
 ```
 
 ## Credits

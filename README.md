@@ -15,7 +15,8 @@ pip install -r ./requirements.tx
 Запуск train: python train.py -c <путь до конфига> -r <путь до чекпоинта>
 ```
 ```
-Запуск test: python3 test.py -c config.json -r tts-checkpoint/model.pth -o audio
+Запуск test:
+python3 download.py && python3 test.py -c config.json -r model_best.pth -o audio
 Файл, куда писать фразы для озвучки - input.txt
 ```
 ## Описание проекта
